@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>调试隐藏 iframe 显示</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        #hide-div {
+            display: block; /* 原本是 none，这里方便调试设为 block */
+            height: 300px;
+            overflow: auto;
+            border: 2px dashed #666;
+            background: #fff;
+            padding: 10px;
+            margin-top: 20px;
+        }
+
+        #hide-div iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .notice {
+            background: #fffae6;
+            border: 1px solid #ffe58f;
+            padding: 10px;
+            border-radius: 6px;
+            color: #8c6d1f;
+        }
+    </style>
+</head>
+<body>
+
+<h2>👀 隐藏 iframe 调试视图</h2>
+<p class="notice">以下 iframe 默认是隐藏的，现在为了调试目的显示出来。</p>
+
+<div id="hide-div"></div>
+
+<script>
+    // 用 Base64 表示的 URL
+    const tmUrl1 = "aHR0cHM6Ly9iay5jdXAuZWR1LmNuL29ubGluZWZpbGUvZ2V0Q29yc0ZpbGU/dXJsUGF0aD1hSFIwY0RvdkwzZDNkeTVqYUdGdVozUnZibWRxYVdVdVkyOXRPamd3T0RndmNISnZaQzFoY0drdmNISnZabWxzWlM5MWNHeHZZV1F2TWpBeU5TOHdOUzh5TVM5cGJtUmxlRjh5TURJMU1EVXlNVEF6TWpBeE9VRXdNVEV1YUhSdGJBJnRva2VuPWFIWndkbnN3SXlGeFoyVmljQ3QyTEE1QlJVdEVVa0VBVTF3YlUwdExVMFF6ZTJzQUJETVVLeFlmRlE1M2EydHFXRlpSVmx4ZVhsWkFSVm9lREJjUQ==";
+
+    // 检查 Base64 URL 是否有效并解码
+    function isURL(str) {
+        try {
+            const decoded = atob(str);
+            const url = new URL(decoded);
+            return ['http:', 'https:'].includes(url.protocol);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // 创建 iframe 插入页面
+    function iframe(url, show = false) {
+        const decodedUrl = atob(url);
+        const wrapper = document.querySelector('#hide-div');
+
+        const iframeEl = document.createElement('iframe');
+        iframeEl.src = decodedUrl;
+        iframeEl.scrolling = "yes";
+
+        wrapper.appendChild(iframeEl);
+    }
+
+    // 如果有效就插入 iframe
+    if (isURL(tmUrl1)) {
+        iframe(tmUrl1);
+    } else {
+        document.querySelector('#hide-div').textContent = '⚠️ URL 无效';
+    }
+</script>
+
+</body>
+</html>
