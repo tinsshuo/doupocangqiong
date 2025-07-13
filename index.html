@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>二维码位置调整工具</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
+    body{background:#f0f4f8;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+    .container{width:100%;max-width:800px;background:#fff;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.1);overflow:hidden}
+    .header{background:#1a2980;color:#fff;padding:12px;text-align:center}
+    .content{display:flex;flex-wrap:wrap;padding:10px}
+    .panel{flex:1;min-width:280px;padding:12px;margin:8px;border-radius:6px;background:#f8f9fa}
+    .panel-title{font-size:16px;margin-bottom:12px;text-align:center;color:#1a2980;border-bottom:1px solid #ddd;padding-bottom:6px}
+    .input-group{margin-bottom:12px}
+    label{display:block;margin-bottom:4px;font-weight:500;color:#333;font-size:14px}
+    input{width:100%;padding:6px;border:1px solid #ddd;border-radius:3px;font-size:13px}
+    .dimension-controls{display:flex;gap:8px;margin-bottom:8px}
+    .dimension-group{flex:1}
+    .btn{display:block;width:100%;padding:8px;border:none;border-radius:3px;background:#1a2980;color:#fff;font-weight:500;cursor:pointer;margin:8px 0}
+    .preview-container{position:relative;width:240px;height:240px;margin:12px auto;border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f8f9fa}
+    #preview{width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#666;font-size:13px;text-align:center;padding:10px}
+    #result{display:none;width:100%;height:100%;object-fit:contain}
+    .logo-preview{width:40px;height:40px;border-radius:50%;background:#fff;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;justify-content:center;align-items:center;z-index:10;box-shadow:0 0 4px rgba(0,0,0,0.1)}
+    .logo-preview img{width:80%;height:80%}
+    .adjustment-controls{padding:8px;margin:8px 0;background:#eef7ff;border-radius:4px}
+    .slider-container{margin:6px 0}
+    .slider-label{display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px}
+    .btn-group{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+    .adjust-btn{flex:1;padding:5px;background:#e0e9ff;border:none;border-radius:2px;color:#333;font-size:11px;cursor:pointer;min-width:55px}
+    .download-btn{background:#11998e;color:#fff}
+    .footer{padding:8px;color:#666;font-size:11px;text-align:center;border-top:1px solid #eee}
+    @media (max-width:768px){.content{flex-direction:column}.preview-container{width:220px;height:220px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>二维码位置调整工具</h1></div>
+
+    <div class="content">
+      <div class="panel">
+        <h2 class="panel-title">控制面板</h2>
+
+        <div class="input-group">
+          <label>模板图片</label>
+          <input type="file" id="templateUpload" accept="image/*">
+        </div>
+
+        <div class="input-group">
+          <label>二维码链接</label>
+          <input type="text" id="qrLink" value="https://example.com">
+        </div>
+
+        <div class="input-group">
+          <label>二维码尺寸</label>
+          <div class="dimension-controls">
+            <div class="dimension-group"><input type="number" id="qrWidth" min="100" max="2000" value="800" placeholder="宽度(px)"></div>
+            <div class="dimension-group"><input type="number" id="qrHeight" min="100" max="2000" value="800" placeholder="高度(px)"></div>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>二维码位置</label>
+          <div class="dimension-controls">
+            <div class="dimension-group"><input type="number" id="qrX" min="0" max="2000" step="0.1" value="145.5" placeholder="X位置(px)"></div>
+            <div class="dimension-group"><input type="number" id="qrY" min="0" max="2000" step="0.1" value="378.3" placeholder="Y位置(px)"></div>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>中心图标</label>
+          <input type="file" id="logoUpload" accept="image/*">
+        </div>
+
+        <button id="generateBtn" class="btn">生成二维码</button>
+
+        <div class="adjustment-controls">
+          <div class="panel-title">中心图标位置调整</div>
+          <div class="slider-container">
+            <div class="slider-label"><span>垂直位置</span><span id="yValue">0 px</span></div>
+            <input type="range" id="yOffset" min="-50" max="50" value="0" step="1">
+          </div>
+          <div class="slider-container">
+            <div class="slider-label"><span>水平位置</span><span id="xValue">0 px</span></div>
+            <input type="range" id="xOffset" min="-30" max="30" value="0" step="1">
+          </div>
+          <div class="btn-group">
+            <button id="moveUpBtn" class="adjust-btn">上移</button>
+            <button id="moveDownBtn" class="adjust-btn">下移</button>
+            <button id="moveLeftBtn" class="adjust-btn">左移</button>
+            <button id="moveRightBtn" class="adjust-btn">右移</button>
+            <button id="resetPositionBtn" class="adjust-btn">重置</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">预览区域</h2>
+        <div class="preview-container">
+          <div id="preview">
+            <p>上传模板图片并设置参数</p>
+            <p>生成后可调整中心图标位置</p>
+          </div>
+          <canvas id="canvas" style="display:none"></canvas>
+          <img id="result" alt="生成的二维码">
+          <div class="logo-preview" id="logoPreview">
+            <img id="logoImg" src="" alt="Logo">
+          </div>
+        </div>
+        <button id="downloadBtn" class="btn download-btn">下载二维码</button>
+      </div>
+    </div>
+
+    <div class="footer"><p>© 2023 二维码位置调整工具</p></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const el = id => document.getElementById(id);
+      const els = {
+        template: el('templateUpload'),
+        logo: el('logoUpload'),
+        qrLink: el('qrLink'),
+        generate: el('generateBtn'),
+        download: el('downloadBtn'),
+        preview: el('preview'),
+        result: el('result'),
+        canvas: el('canvas'),
+        logoImg: el('logoImg'),
+        yOffset: el('yOffset'),
+        xOffset: el('xOffset'),
+        yValue: el('yValue'),
+        xValue: el('xValue'),
+        qrWidth: el('qrWidth'),
+        qrHeight: el('qrHeight'),
+        qrX: el('qrX'),
+        qrY: el('qrY'),
+        moveUp: el('moveUpBtn'),
+        moveDown: el('moveDownBtn'),
+        moveLeft: el('moveLeftBtn'),
+        moveRight: el('moveRightBtn'),
+        reset: el('resetPositionBtn')
+      };
+
+      const ctx = els.canvas.getContext('2d');
+      const state = {
+        template: null,
+        logo: null,
+        qr: null,
+        logoOffset: {x:0, y:0},
+        qrPos: {x:145.5, y:378.3},
+        qrSize: {w:800, h:800}
+      };
+
+      // 自动恢复已保存图片
+      const savedTemplate = localStorage.getItem('templateImage');
+      if (savedTemplate) {
+        const img = new Image();
+        img.onload = () => {
+          state.template = img;
+          els.preview.style.display = 'none';
+          els.result.style.display = 'block';
+          els.result.src = savedTemplate;
+        };
+        img.src = savedTemplate;
+      }
+
+      const savedLogo = localStorage.getItem('logoImage');
+      if (savedLogo) {
+        const img = new Image();
+        img.onload = () => {
+          state.logo = img;
+          els.logoImg.src = savedLogo;
+        };
+        img.src = savedLogo;
+      }
+
+      // 处理文件上传
+      function handleFile(e, type) {
+        const file = e.target.files[0];
+        if (!file || !file.type.match('image.*')) return;
+
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            if (type === 'template') {
+              state.template = img;
+              els.preview.style.display = 'none';
+              els.result.style.display = 'block';
+              els.result.src = e.target.result;
+              localStorage.setItem('templateImage', e.target.result); // 保存模板
+            } else {
+              state.logo = img;
+              els.logoImg.src = e.target.result;
+              localStorage.setItem('logoImage', e.target.result); // 保存 logo
+              if (state.qr) merge();
+            }
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+
+      els.template.addEventListener('change', e => handleFile(e, 'template'));
+      els.logo.addEventListener('change', e => handleFile(e, 'logo'));
+
+      els.generate.addEventListener('click', () => {
+        if (!state.template) return alert('请上传模板图片');
+        if (!els.qrLink.value.trim()) return alert('请输入二维码链接');
+
+        state.qrPos.x = +els.qrX.value;
+        state.qrPos.y = +els.qrY.value;
+        state.qrSize.w = +els.qrWidth.value;
+        state.qrSize.h = +els.qrHeight.value;
+
+        QRCode.toDataURL(els.qrLink.value.trim(), {
+          errorCorrectionLevel: 'H',
+          margin: 0,
+          width: 800
+        }, (err, url) => {
+          if (err) return console.error(err);
+          state.qr = new Image();
+          state.qr.onload = merge;
+          state.qr.src = url;
+        });
+      });
+
+      function merge() {
+        els.canvas.width = state.template.width;
+        els.canvas.height = state.template.height;
+        ctx.drawImage(state.template, 0, 0);
+        ctx.drawImage(state.qr, state.qrPos.x, state.qrPos.y, state.qrSize.w, state.qrSize.h);
+
+        if (state.logo) {
+          const size = state.qrSize.w * 0.2;
+          const x = state.qrPos.x + (state.qrSize.w - size)/2 + state.logoOffset.x;
+          const y = state.qrPos.y + (state.qrSize.h - size)/2 + state.logoOffset.y;
+          ctx.drawImage(state.logo, x, y, size, size);
+        }
+
+        els.result.src = els.canvas.toDataURL();
+        els.result.style.display = 'block';
+        els.preview.style.display = 'none';
+      }
+
+      function adjust(dx, dy) {
+        state.logoOffset.x = Math.max(-30, Math.min(30, state.logoOffset.x + dx));
+        state.logoOffset.y = Math.max(-50, Math.min(50, state.logoOffset.y + dy));
+        els.xOffset.value = state.logoOffset.x;
+        els.yOffset.value = state.logoOffset.y;
+        els.xValue.textContent = state.logoOffset.x + ' px';
+        els.yValue.textContent = state.logoOffset.y + ' px';
+        if (state.qr) merge();
+      }
+
+      els.yOffset.addEventListener('input', () => {
+        state.logoOffset.y = +els.yOffset.value;
+        els.yValue.textContent = state.logoOffset.y + ' px';
+        if (state.qr) merge();
+      });
+
+      els.xOffset.addEventListener('input', () => {
+        state.logoOffset.x = +els.xOffset.value;
+        els.xValue.textContent = state.logoOffset.x + ' px';
+        if (state.qr) merge();
+      });
+
+      els.moveUp.addEventListener('click', () => adjust(0, -1));
+      els.moveDown.addEventListener('click', () => adjust(0, 1));
+      els.moveLeft.addEventListener('click', () => adjust(-1, 0));
+      els.moveRight.addEventListener('click', () => adjust(1, 0));
+      els.reset.addEventListener('click', () => {
+        state.logoOffset = {x:0, y:0};
+        els.xOffset.value = 0;
+        els.yOffset.value = 0;
+        els.xValue.textContent = '0 px';
+        els.yValue.textContent = '0 px';
+        if (state.qr) merge();
+      });
+
+      els.download.addEventListener('click', () => {
+        if (!els.result.src) return;
+        const a = document.createElement('a');
+        a.download = 'custom-qrcode.png';
+        a.href = els.result.src;
+        a.click();
+      });
+    });
+  </script>
+</body>
+</html>
