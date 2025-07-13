@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>绿泡泡二维码</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;font-family:sans-serif}
+    body{background:#f0f4f8;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+    .container{width:100%;max-width:800px;background:#fff;border-radius:8px;box-shadow:0 4px 10px rgba(0,0,0,0.1);overflow:hidden}
+    .header{background:#1a2980;color:#fff;padding:12px;text-align:center}
+    .content{display:flex;flex-wrap:wrap;padding:10px}
+    .panel{flex:1;min-width:280px;padding:12px;margin:8px;border-radius:6px;background:#f8f9fa}
+    .panel-title{font-size:16px;margin-bottom:12px;text-align:center;color:#1a2980;border-bottom:1px solid #ddd;padding-bottom:6px}
+    .input-group{margin-bottom:12px}
+    label{display:block;margin-bottom:4px;font-weight:500;color:#333;font-size:14px}
+    select, input{width:100%;padding:6px;border:1px solid #ddd;border-radius:3px;font-size:13px}
+    .dimension-controls{display:flex;gap:8px;margin-bottom:8px}
+    .dimension-group{flex:1}
+    .btn{display:block;width:100%;padding:8px;border:none;border-radius:3px;background:#1a2980;color:#fff;font-weight:500;cursor:pointer;margin:8px 0}
+    .preview-container{position:relative;width:240px;height:240px;margin:12px auto;border:1px solid #ddd;border-radius:6px;overflow:hidden;background:#f8f9fa}
+    #preview{width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#666;font-size:13px;text-align:center;padding:10px}
+    #result{display:none;width:100%;height:100%;object-fit:contain}
+    .logo-preview{width:40px;height:40px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;justify-content:center;align-items:center;z-index:10;box-shadow:0 0 4px rgba(0,0,0,0.1)}
+    .logo-preview img{width:80%;height:80%}
+    .adjustment-controls{padding:8px;margin:8px 0;background:#eef7ff;border-radius:4px}
+    .slider-container{margin:6px 0}
+    .slider-label{display:flex;justify-content:space-between;margin-bottom:3px;font-size:12px}
+    .btn-group{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+    .adjust-btn{flex:1;padding:5px;background:#e0e9ff;border:none;border-radius:2px;color:#333;font-size:11px;cursor:pointer;min-width:55px}
+    .download-btn{background:#11998e;color:#fff}
+    .footer{padding:8px;color:#666;font-size:11px;text-align:center;border-top:1px solid #eee}
+    @media (max-width:768px){.content{flex-direction:column}.preview-container{width:220px;height:220px}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>绿泡泡二维码生成</h1></div>
+
+    <div class="content">
+      <div class="panel">
+        <h2 class="panel-title">控制面板</h2>
+
+        <div class="input-group">
+          <label>选择模板</label>
+          <select id="templateSelect">
+            <option value="">-- 无模板 --</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label>上传模板图片</label>
+          <input type="file" id="templateUpload" accept="image/*" />
+        </div>
+
+        <div class="input-group">
+          <label>二维码链接</label>
+          <input type="text" id="qrLink" value="" />
+        </div>
+
+        <div class="input-group">
+          <label>二维码尺寸</label>
+          <div class="dimension-controls">
+            <div class="dimension-group"><input type="number" id="qrWidth" min="100" max="2000" value="800" placeholder="宽度(px)"></div>
+            <div class="dimension-group"><input type="number" id="qrHeight" min="100" max="2000" value="800" placeholder="高度(px)"></div>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>二维码位置</label>
+          <div class="dimension-controls">
+            <div class="dimension-group"><input type="number" id="qrX" min="0" max="2000" step="0.01" value="160" placeholder="X位置(px)"></div>
+            <div class="dimension-group"><input type="number" id="qrY" min="0" max="2000" step="0.01" value="410" placeholder="Y位置(px)"></div>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>中心图标</label>
+          <input type="file" id="logoUpload" accept="image/*" />
+        </div>
+
+        <button id="generateBtn" class="btn">生成二维码</button>
+
+        <div class="adjustment-controls">
+          <div class="panel-title">中心图标位置调整</div>
+          <div class="slider-container">
+            <div class="slider-label"><span>垂直位置</span><span id="yValue">0 px</span></div>
+            <input type="range" id="yOffset" min="-50" max="50" value="0" step="1" />
+          </div>
+          <div class="slider-container">
+            <div class="slider-label"><span>水平位置</span><span id="xValue">0 px</span></div>
+            <input type="range" id="xOffset" min="-30" max="30" value="0" step="1" />
+          </div>
+          <div class="btn-group">
+            <button id="moveUpBtn" class="adjust-btn">上移</button>
+            <button id="moveDownBtn" class="adjust-btn">下移</button>
+            <button id="moveLeftBtn" class="adjust-btn">左移</button>
+            <button id="moveRightBtn" class="adjust-btn">右移</button>
+            <button id="resetPositionBtn" class="adjust-btn">重置</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">预览区域</h2>
+        <div class="preview-container">
+          <div id="preview">
+            <p>上传模板图片并设置参数</p>
+            <p>生成后可调整中心图标位置</p>
+          </div>
+          <canvas id="canvas" style="display:none; touch-action: none; position: relative;"></canvas>
+          <img id="result" alt="生成的二维码" />
+          <div class="logo-preview" id="logoPreview">
+            <img id="logoImg" src="" alt="Logo" />
+          </div>
+        </div>
+        <button id="downloadBtn" class="btn download-btn">下载二维码</button>
+      </div>
+    </div>
+
+    <div class="footer"><p>© 2025 绿泡泡二维码工具</p></div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const el = id => document.getElementById(id);
+      const els = {
+        templateSelect: el('templateSelect'),
+        templateUpload: el('templateUpload'),
+        logoUpload: el('logoUpload'),
+        qrLink: el('qrLink'),
+        generate: el('generateBtn'),
+        download: el('downloadBtn'),
+        preview: el('preview'),
+        result: el('result'),
+        canvas: el('canvas'),
+        logoImg: el('logoImg'),
+        yOffset: el('yOffset'),
+        xOffset: el('xOffset'),
+        yValue: el('yValue'),
+        xValue: el('xValue'),
+        qrWidth: el('qrWidth'),
+        qrHeight: el('qrHeight'),
+        qrX: el('qrX'),
+        qrY: el('qrY'),
+        moveUp: el('moveUpBtn'),
+        moveDown: el('moveDownBtn'),
+        moveLeft: el('moveLeftBtn'),
+        moveRight: el('moveRightBtn'),
+        resetPosition: el('resetPositionBtn'),
+        logoPreview: el('logoPreview'),
+      };
+
+      // 状态管理
+      const state = {
+        templateImg: null,
+        logoImg: null,
+        qrPos: { x: 160, y: 410 },
+        qrSize: { w: 800, h: 800 },
+        link: '',
+        logoOffset: { x: 0, y: 0 },
+      };
+
+      // 填充默认模板（示例）
+      const defaultTemplates = [
+        { name: '无模板', url: '' },
+        { name: '模板1', url: 'https://cdn.jsdelivr.net/gh/GreenBubble123/qr-template1.png' },
+        { name: '模板2', url: 'https://cdn.jsdelivr.net/gh/GreenBubble123/qr-template2.png' }
+      ];
+
+      defaultTemplates.forEach(tpl => {
+        const opt = document.createElement('option');
+        opt.value = tpl.url;
+        opt.textContent = tpl.name;
+        els.templateSelect.appendChild(opt);
+      });
+
+      // 载入模板图片
+      function loadTemplate(url) {
+        if (!url) {
+          state.templateImg = null;
+          redraw();
+          return;
+        }
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          state.templateImg = img;
+          redraw();
+        };
+        img.onerror = () => alert('模板图片加载失败');
+        img.src = url;
+      }
+
+      // 读取用户上传模板图片
+      els.templateUpload.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const url = URL.createObjectURL(file);
+        loadTemplate(url);
+        els.templateSelect.value = '';
+      });
+
+      // 监听模板选择改变
+      els.templateSelect.addEventListener('change', () => {
+        if (els.templateSelect.value) {
+          loadTemplate(els.templateSelect.value);
+          els.templateUpload.value = '';
+        } else {
+          state.templateImg = null;
+          redraw();
+        }
+      });
+
+      // 读取上传的logo
+      els.logoUpload.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = evt => {
+          els.logoImg.src = evt.target.result;
+          state.logoImg = new Image();
+          state.logoImg.onload = redraw;
+          state.logoImg.src = evt.target.result;
+          els.logoPreview.style.display = 'flex';
+        };
+        reader.readAsDataURL(file);
+      });
+
+      // 更新二维码链接
+      els.qrLink.addEventListener('input', e => {
+        state.link = e.target.value.trim();
+      });
+
+      // 更新二维码尺寸和位置，监听数值输入
+      ['qrWidth','qrHeight','qrX','qrY'].forEach(id => {
+        els[id].addEventListener('input', e => {
+          const val = parseInt(e.target.value, 10);
+          if (isNaN(val)) return;
+          if (id === 'qrWidth') state.qrSize.w = val;
+          if (id === 'qrHeight') state.qrSize.h = val;
+          if (id === 'qrX') state.qrPos.x = val;
+          if (id === 'qrY') state.qrPos.y = val;
+          redraw();
+        });
+      });
+
+      // logo位置滑块更新
+      els.xOffset.addEventListener('input', e => {
+        state.logoOffset.x = parseInt(e.target.value, 10);
+        els.xValue.textContent = state.logoOffset.x + ' px';
+        redraw();
+      });
+      els.yOffset.addEventListener('input', e => {
+        state.logoOffset.y = parseInt(e.target.value, 10);
+        els.yValue.textContent = state.logoOffset.y + ' px';
+        redraw();
+      });
+
+      // 按钮调整logo位置
+      els.moveUp.addEventListener('click', () => { state.logoOffset.y -= 5; clampLogoOffset(); updateSliders(); redraw(); });
+      els.moveDown.addEventListener('click', () => { state.logoOffset.y += 5; clampLogoOffset(); updateSliders(); redraw(); });
+      els.moveLeft.addEventListener('click', () => { state.logoOffset.x -= 5; clampLogoOffset(); updateSliders(); redraw(); });
+      els.moveRight.addEventListener('click', () => { state.logoOffset.x += 5; clampLogoOffset(); updateSliders(); redraw(); });
+      els.resetPosition.addEventListener('click', () => { state.logoOffset = { x: 0, y: 0 }; updateSliders(); redraw(); });
+
+      function clampLogoOffset() {
+        if(state.logoOffset.x > 30) state.logoOffset.x = 30;
+        if(state.logoOffset.x < -30) state.logoOffset.x = -30;
+        if(state.logoOffset.y > 50) state.logoOffset.y = 50;
+        if(state.logoOffset.y < -50) state.logoOffset.y = -50;
+      }
+      function updateSliders() {
+        els.xOffset.value = state.logoOffset.x;
+        els.yOffset.value = state.logoOffset.y;
+        els.xValue.textContent = state.logoOffset.x + ' px';
+        els.yValue.textContent = state.logoOffset.y + ' px';
+      }
+      updateSliders();
+
+      // 生成二维码
+      els.generate.addEventListener('click', () => {
+        if (!state.link) return alert('请输入二维码链接');
+        generateQRCode(state.link, state.qrSize.w, state.qrSize.h).then(() => {
+          redraw();
+        }).catch(() => alert('二维码生成失败'));
+      });
+
+      // 下载按钮
+      els.download.addEventListener('click', () => {
+        if (!state.canvas.toDataURL) return alert('不支持下载');
+        const link = document.createElement('a');
+        link.download = 'qrcode.png';
+        link.href = state.canvas.toDataURL('image/png');
+        link.click();
+      });
+
+      // 生成二维码函数
+      function generateQRCode(text, width, height) {
+        return new Promise((resolve, reject) => {
+          const tempCanvas = document.createElement('canvas');
+          QRCode.toCanvas(tempCanvas, text, {
+            width, height,
+            margin: 1,
+            color: { dark: '#000000', light: '#ffffff' }
+          }, (error) => {
+            if (error) reject(error);
+            else {
+              // 把二维码画到我们真正的 canvas，位置和大小后续绘制
+              qrCanvasContext.clearRect(0, 0, state.canvas.width, state.canvas.height);
+              qrCanvasContext.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height);
+              // 保存二维码图像以备绘制中心logo
+              state.qrImage = new Image();
+              state.qrImage.onload = () => {
+                redraw();
+                resolve();
+              };
+              state.qrImage.onerror = () => reject(new Error('二维码图片加载失败'));
+              state.qrImage.src = tempCanvas.toDataURL();
+            }
+          });
+        });
+      }
+
+      // Canvas初始化和绘制
+      const canvas = els.canvas;
+      const ctx = canvas.getContext('2d');
+      state.canvas = canvas;
+      const qrCanvasContext = document.createElement('canvas').getContext('2d');
+
+      function redraw() {
+        const w = state.qrSize.w || 800;
+        const h = state.qrSize.h || 800;
+        canvas.width = w;
+        canvas.height = h;
+        ctx.clearRect(0, 0, w, h);
+
+        // 绘制模板背景图（如果有）
+        if (state.templateImg) {
+          ctx.drawImage(state.templateImg, 0, 0, w, h);
+        } else {
+          ctx.fillStyle = '#fff';
+          ctx.fillRect(0, 0, w, h);
+        }
+
+        // 绘制二维码图
+        if (state.qrImage) {
+          ctx.drawImage(state.qrImage, state.qrPos.x, state.qrPos.y, w, h);
+        }
+
+        // 绘制logo（中心图标）
+        if (state.logoImg) {
+          const logoW = w * 0.15;
+          const logoH = h * 0.15;
+          const logoX = state.qrPos.x + w/2 - logoW/2 + state.logoOffset.x;
+          const logoY = state.qrPos.y + h/2 - logoH/2 + state.logoOffset.y;
+          ctx.drawImage(state.logoImg, logoX, logoY, logoW, logoH);
+          // 更新logo预览位置
+          els.logoPreview.style.left = (logoX + logoW/2) + 'px';
+          els.logoPreview.style.top = (logoY + logoH/2) + 'px';
+          els.logoPreview.style.width = logoW + 'px';
+          els.logoPreview.style.height = logoH + 'px';
+          els.logoPreview.style.display = 'flex';
+          els.logoImg.style.width = '100%';
+          els.logoImg.style.height = '100%';
+        } else {
+          els.logoPreview.style.display = 'none';
+        }
+
+        // 更新隐藏图片预览（用于显示生成图像）
+        els.result.src = canvas.toDataURL('image/png');
+        els.result.style.display = 'block';
+        els.preview.style.display = 'none';
+
+        // 同步输入框显示当前位置和尺寸
+        els.qrX.value = Math.round(state.qrPos.x);
+        els.qrY.value = Math.round(state.qrPos.y);
+        els.qrWidth.value = Math.round(state.qrSize.w);
+        els.qrHeight.value = Math.round(state.qrSize.h);
+      }
+
+      // 初始化二维码图片
+      state.link = els.qrLink.value.trim();
+      generateQRCode(state.link, state.qrSize.w, state.qrSize.h).then(() => redraw());
+
+      // ==============================
+      // 新增：鼠标拖动/缩放 & 触摸拖动/捏合缩放
+      // ==============================
+
+      let isDragging = false;
+      let dragStart = { x: 0, y: 0 };
+      let initialQRPos = { x: 0, y: 0 };
+      let initialPinchDistance = null;
+      let initialQRSize = { w: 0, h: 0 };
+
+      // 触摸拖动和缩放
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          dragStart = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+          initialQRPos = { ...state.qrPos };
+        } else if (e.touches.length === 2) {
+          isDragging = false;
+          initialPinchDistance = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          initialQRSize = { ...state.qrSize };
+        }
+      });
+
+      canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        if (isDragging && e.touches.length === 1) {
+          const dx = e.touches[0].clientX - dragStart.x;
+          const dy = e.touches[0].clientY - dragStart.y;
+          state.qrPos.x = initialQRPos.x + dx;
+          state.qrPos.y = initialQRPos.y + dy;
+          els.qrX.value = Math.round(state.qrPos.x);
+          els.qrY.value = Math.round(state.qrPos.y);
+          redraw();
+        } else if (e.touches.length === 2 && initialPinchDistance) {
+          const newDist = Math.hypot(
+            e.touches[0].clientX - e.touches[1].clientX,
+            e.touches[0].clientY - e.touches[1].clientY
+          );
+          const scale = newDist / initialPinchDistance;
+          state.qrSize.w = Math.max(100, Math.min(2000, initialQRSize.w * scale));
+          state.qrSize.h = Math.max(100, Math.min(2000, initialQRSize.h * scale));
+          els.qrWidth.value = Math.round(state.qrSize.w);
+          els.qrHeight.value = Math.round(state.qrSize.h);
+          redraw();
+        }
+      }, { passive: false });
+
+      canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length === 0) {
+          isDragging = false;
+          initialPinchDistance = null;
+        }
+      });
+
+      // 鼠标拖动二维码
+      canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        dragStart = { x: e.clientX, y: e.clientY };
+        initialQRPos = { ...state.qrPos };
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - dragStart.x;
+        const dy = e.clientY - dragStart.y;
+        state.qrPos.x = initialQRPos.x + dx;
+        state.qrPos.y = initialQRPos.y + dy;
+        els.qrX.value = Math.round(state.qrPos.x);
+        els.qrY.value = Math.round(state.qrPos.y);
+        redraw();
+      });
+      window.addEventListener('mouseup', () => {
+        isDragging = false;
+      });
+
+      // 鼠标滚轮缩放二维码
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const scaleDelta = e.deltaY < 0 ? 1.05 : 0.95;
+        state.qrSize.w = Math.max(100, Math.min(2000, state.qrSize.w * scaleDelta));
+        state.qrSize.h = Math.max(100, Math.min(2000, state.qrSize.h * scaleDelta));
+        els.qrWidth.value = Math.round(state.qrSize.w);
+        els.qrHeight.value = Math.round(state.qrSize.h);
+        redraw();
+      }, { passive: false });
+    });
+  </script>
+</body>
+</html>
